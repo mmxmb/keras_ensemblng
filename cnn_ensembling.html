@@ -11775,12 +11775,11 @@ div#notebook {
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Ensembling-ConvNets-in-Keras">Ensembling ConvNets in Keras<a class="anchor-link" href="#Ensembling-ConvNets-in-Keras">&#182;</a></h1><h2 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">&#182;</a></h2><p>"In statistics and machine learning, ensemble methods use multiple learning algorithms to obtain better predictive performance than could be obtained from any of the constituent learning algorithms alone. Unlike a statistical ensemble in statistical mechanics, which is usually infinite, a machine learning ensemble consists of only a concrete finite set of alternative models, but typically allows for much more flexible structure to exist among those alternatives." [<a href="https://en.wikipedia.org/wiki/Ensemble_learning">Wikipedia</a>]</p>
-<p>The main motivation for using an ensemble is to find a hypothesis that is not necessarily contained within the hypothesis space of the models from which it is built. Empirically, ensembles tend to yield better results when there is a significant diversity among the models.</p>
+<h1 id="Ensembling-ConvNets-using-Keras">Ensembling ConvNets using Keras<a class="anchor-link" href="#Ensembling-ConvNets-using-Keras">&#182;</a></h1><h2 id="Introduction">Introduction<a class="anchor-link" href="#Introduction">&#182;</a></h2><p>"In statistics and machine learning, ensemble methods use multiple learning algorithms to obtain better predictive performance than could be obtained from any of the constituent learning algorithms alone. Unlike a statistical ensemble in statistical mechanics, which is usually infinite, a machine learning ensemble consists of only a concrete finite set of alternative models, but typically allows for much more flexible structure to exist among those alternatives." [<a href="https://en.wikipedia.org/wiki/Ensemble_learning">1</a>]</p>
+<p>The main motivation for using an ensemble is to find a hypothesis that is not necessarily contained within the hypothesis space of the models from which it is built. Empirically, ensembles tend to yield better results when there is a significant diversity among the models. [<a href="http://jair.org/papers/paper614.html">2</a>]</p>
 <h2 id="Motivation">Motivation<a class="anchor-link" href="#Motivation">&#182;</a></h2><p>If you look at results of any big machine learning competition, you will most likely find that the top results are achieved by an ensemble of models rather than a single model. For instance, the top-scoring single model architecture at <a href="http://www.image-net.org/challenges/LSVRC/2015/results">ILSVRC2015</a> is on place 13. Places 1-12 are taken by various ensembles.</p>
-<p>I haven't seen a tutorial or documentation on how to use multiple neural networks in an ensemble, so I decided to make a practical guide on this topic.</p>
-<p>I will be using Keras, specifically its Functional API, to recreate three small CNNs (compared to ResNet50, Inception etc.) from relatively well-known papers. I will train each model separately on <a href="https://www.cs.toronto.edu/~kriz/cifar.html">CIFAR-10</a> training dataset. Then each model will be evaluated using the test set. After that, I will put all three models in an ensemble and evaluate it. It is expected that the ensemble will perform better on a test set that any single model in the ensemble separately.</p>
-<p>There are many different types of ensembles; stacking is one of them. It is one of the more general types and can theoretically represent any other ensemble technique. Stacking involves training a learning algorithm to combine the predictions of several other learning algorithms. For the sake of this example, I will use one of the simplest forms of Stacking, which involves taking an average of outputs of models in the ensemble. Since averaging doesn't take any parameters, there is no need to train this ensemble (only its models).</p>
+<p>I haven't seen a tutorial or documentation on how to use several neural networks in an ensemble, so I decided to share the way I do it. I will be using <a href="https://keras.io/">Keras</a>, specifically its <a href="https://keras.io/models/model/">Functional API</a>, to recreate three small CNNs (compared to ResNet50, Inception etc.) from relatively well-known papers. I will train each model separately on <a href="https://www.cs.toronto.edu/~kriz/cifar.html">CIFAR-10</a> training dataset. [<a href="https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf">3</a>] Then each model will be evaluated using the test set. After that, I will put all three models in an ensemble and evaluate it. It is expected that the ensemble will perform better on a test set than any single model in the ensemble separately.</p>
+<p>There are many different types of ensembles; stacking is one of them. It is one of the more general types and can theoretically represent any other ensemble technique. Stacking involves training a learning algorithm to combine the predictions of several other learning algorithms. [<a href="https://en.wikipedia.org/wiki/Ensemble_learning">1</a>] For the sake of this example, I will use one of the simplest forms of Stacking, which involves taking an average of outputs of models in the ensemble. Since averaging doesn’t take any parameters, there is no need to train this ensemble (only its models).</p>
 
 </div>
 </div>
@@ -11796,11 +11795,11 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[1]:</div>
+<div class="prompt input_prompt">In&nbsp;[13]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">keras.models</span> <span class="k">import</span> <span class="n">Model</span><span class="p">,</span> <span class="n">Input</span>
-<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">GlobalAveragePooling2D</span><span class="p">,</span> <span class="n">Dropout</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Average</span>
+<span class="kn">from</span> <span class="nn">keras.layers</span> <span class="k">import</span> <span class="n">Conv2D</span><span class="p">,</span> <span class="n">MaxPooling2D</span><span class="p">,</span> <span class="n">GlobalAveragePooling2D</span><span class="p">,</span> <span class="n">Activation</span><span class="p">,</span> <span class="n">Average</span><span class="p">,</span> <span class="n">Dropout</span>
 <span class="kn">from</span> <span class="nn">keras.utils</span> <span class="k">import</span> <span class="n">to_categorical</span>
 <span class="kn">from</span> <span class="nn">keras.losses</span> <span class="k">import</span> <span class="n">categorical_crossentropy</span>
 <span class="kn">from</span> <span class="nn">keras.callbacks</span> <span class="k">import</span> <span class="n">ModelCheckpoint</span><span class="p">,</span> <span class="n">TensorBoard</span>
@@ -11814,33 +11813,13 @@ div#notebook {
 </div>
 </div>
 
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stderr output_text">
-<pre>Using TensorFlow backend.
-/home/ubuntu/anaconda/lib/python3.6/importlib/_bootstrap.py:205: RuntimeWarning: compiletime version 3.5 of module &#39;tensorflow.python.framework.fast_tensor_util&#39; does not match runtime version 3.6
-  return f(*args, **kwds)
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
 </div>
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>I am using CIFAR-10, since it is relatively easy to find papers describing architectures that work well on this dataset. Using a popular dataset also makes this example easily reproducible.</p>
-<p>Here the dataset is imported. Both train and test image data is normalized. The training label vector is converted to a one-hot-matrix. Don't need to convert the test label vector, since it won't be used during training.</p>
+<p>Here the dataset is imported. Both train and test image data is normalized. The training label vector is converted to a one-hot-matrix. Don’t need to convert the test label vector, since it won’t be used during training.</p>
 
 </div>
 </div>
@@ -11930,9 +11909,9 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="First-model:-ConvPool-CNN-C">First model: ConvPool-CNN-C<a class="anchor-link" href="#First-model:-ConvPool-CNN-C">&#182;</a></h2><p>The first model that I am going to train is ConvPool-CNN-C [<a href="https://arxiv.org/abs/1412.6806">Springenberg et al., 2015, Striving for Simplicity: The All Convolutional Net</a>]. Its descritption appears on page 4 of the linked paper.</p>
+<h2 id="First-model:-ConvPool-CNN-C">First model: ConvPool-CNN-C<a class="anchor-link" href="#First-model:-ConvPool-CNN-C">&#182;</a></h2><p>The first model that I am going to train is ConvPool-CNN-C [<a href="https://arxiv.org/abs/1412.6806">4</a>]. Its descritption appears on page 4 of the linked paper.</p>
 <p>The model is pretty straightforward. It features a common pattern where several convolutional layers are followed by a pooling layer. The only thing about this model that might be unfamiliar to some people is its final layers. Instead of using several fully-connected layers, a global average pooling layer is used.</p>
-<p>Here is a brief overview of how global pooling layer works. The last convolutional layer <code>Conv2D(10, (1, 1))</code> outputs 10 feature maps corresponding to ten output classes. Then the <code>GlobalAveragePooling2D()</code> layer computes spatial average of these 10 feature maps, which means that its output is just a vector with a lenght 10. After that, a softmax activation is applied to that vector. As you can see, this method is in some way analogous to using FC layers at the top of the model. You can read more about global pooling layers and their advantages in <a href="https://arxiv.org/abs/1312.4400">Network in Network</a> paper.</p>
+<p>Here is a brief overview of how global pooling layer works. The last convolutional layer <code>Conv2D(10, (1, 1))</code> outputs 10 feature maps corresponding to ten output classes. Then the <code>GlobalAveragePooling2D()</code> layer computes spatial average of these 10 feature maps, which means that its output is just a vector with a lenght 10. After that, a softmax activation is applied to that vector. As you can see, this method is in some way analogous to using FC layers at the top of the model. You can read more about global pooling layers and their advantages in Network in Network paper. [<a href="https://arxiv.org/abs/1312.4400">5</a>]</p>
 <p>One important thing to note: there's no activation function applied to the output of the final <code>Conv2D(10, (1, 1))</code> layer, since the output of this layer has to go through <code>GlobalAveragePooling2D()</code> first.</p>
 
 </div>
@@ -11940,7 +11919,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[6]:</div>
+<div class="prompt input_prompt">In&nbsp;[5]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">conv_pool_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">):</span>
@@ -11969,9 +11948,18 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 
 </div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>Instantiate the model.</p>
+
+</div>
+</div>
+</div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
+<div class="prompt input_prompt">In&nbsp;[6]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">conv_pool_cnn_model</span> <span class="o">=</span> <span class="n">conv_pool_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">)</span>
@@ -11986,14 +11974,14 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>For simplicity's sake, each model is compiled and trained using the same parameters. Using 20 epochs with a batch size of 32 (1250 steps per epoch) seems sufficient for any of the three models to get to some local minima. Randomly chosen 20% of the training dataset is used for validation.</p>
+<p>For simplicity’s sake, each model is compiled and trained using the same parameters. Using 20 epochs with a batch size of 32 (1250 steps per epoch) seems sufficient for any of the three models to get to some local minima. Randomly chosen 20% of the training dataset is used for validation.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[8]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">compile_and_train</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">):</span> 
@@ -12039,14 +12027,15 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>One simple way to evaluate the model is to calculate the error rate on the test set.</p>
+<p>The model achieves ~79% validation accuracy.</p>
+<p>Evaluate the model by calculating the error rate on the test set.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[9]:</div>
+<div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">evaluate_error</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
@@ -12064,7 +12053,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[22]:</div>
+<div class="prompt input_prompt">In&nbsp;[21]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">evaluate_error</span><span class="p">(</span><span class="n">conv_pool_cnn_model</span><span class="p">)</span>
@@ -12080,7 +12069,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[22]:</div>
+<div class="prompt output_prompt">Out[21]:</div>
 
 
 
@@ -12099,14 +12088,14 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Second-model:-ALL-CNN-C">Second model: ALL-CNN-C<a class="anchor-link" href="#Second-model:-ALL-CNN-C">&#182;</a></h2><p>The next CNN, ALL-CNN-C, comes from the same paper [<a href="https://arxiv.org/abs/1412.6806">Springenberg et al., 2015, Striving for Simplicity: The All Convolutional Net</a>]. This model is very similar to the previous one. Really, the only difference is that convolutional layers with a stride of 2 are used in place of max pooling layers. Again, note that there is no activation function used immediately after the <code>Conv2D(10, (1, 1))</code> layer. The model will fail to train if a <code>relu</code> activation is used immediately after that layer.</p>
+<h2 id="Second-model:-ALL-CNN-C">Second model: ALL-CNN-C<a class="anchor-link" href="#Second-model:-ALL-CNN-C">&#182;</a></h2><p>The next CNN, ALL-CNN-C, comes from the same paper. [<a href="https://arxiv.org/abs/1412.6806">4</a>] This model is very similar to the previous one. Really, the only difference is that convolutional layers with a stride of 2 are used in place of max pooling layers. Again, note that there is no activation function used immediately after the Conv2D(10, (1, 1)) layer. The model will fail to train if a ReLU activation is used immediately after that layer.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="prompt input_prompt">In&nbsp;[9]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">all_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">):</span>
@@ -12163,6 +12152,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
+<p>The model converges to ~75% validation accuracy.</p>
 <p>Since two models are very similar to each other, it is expected that the error rate doesn't differ much.</p>
 
 </div>
@@ -12170,7 +12160,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="prompt input_prompt">In&nbsp;[20]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">evaluate_error</span><span class="p">(</span><span class="n">all_cnn_model</span><span class="p">)</span>
@@ -12186,7 +12176,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[23]:</div>
+<div class="prompt output_prompt">Out[20]:</div>
 
 
 
@@ -12205,14 +12195,15 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Third-Model:-Network-In-Network-CNN">Third Model: Network In Network CNN<a class="anchor-link" href="#Third-Model:-Network-In-Network-CNN">&#182;</a></h2><p>The third CNN is Network in Network CNN [<a href="https://arxiv.org/abs/1312.4400">Lin et al., 2013, Network In Network</a>]. This is a CNN from the paper that introduced global pooling layers. It's smaller than previous two models, therefore is much faster to train. No <code>relu</code> after the final convolutional layer!</p>
+<h2 id="Third-Model:-Network-In-Network-CNN">Third Model: Network In Network CNN<a class="anchor-link" href="#Third-Model:-Network-In-Network-CNN">&#182;</a></h2><p>The third CNN is Network in Network CNN. [<a href="https://arxiv.org/abs/1312.4400">5</a>] This is a CNN from the paper that introduced global pooling layers. It’s smaller than previous two models, therefore is much faster to train. No relu after the final convolutional layer!</p>
+<p>Instead of using multilayer perceptron inside MLP convolution layer, I used convolutional layers with 1x1 kernel. This way there are less parameters to optimize, the training goes faster and I could achieve better results (couldn’t get validation accuracy higher than 50% when using FC layers). The paper says that the function applied by mlpconv layer is equivalent to cascaded cross channel parametric pooling on a normal convolution layer, which in turn is equivalent to a convolution layer with 1x1 convolution kernel. Please correct me if I my interpretation of the architecture is incorrect.</p>
 
 </div>
 </div>
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[12]:</div>
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">nin_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">):</span>
@@ -12221,14 +12212,14 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">,</span><span class="n">padding</span><span class="o">=</span><span class="s1">&#39;valid&#39;</span><span class="p">)(</span><span class="n">model_input</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
     
     <span class="c1">#mlpconv block2</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">,</span><span class="n">padding</span><span class="o">=</span><span class="s1">&#39;valid&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Conv2D</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">activation</span><span class="o">=</span><span class="s1">&#39;relu&#39;</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">MaxPooling2D</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">x</span> <span class="o">=</span> <span class="n">Dropout</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)(</span><span class="n">x</span><span class="p">)</span>
     
     <span class="c1">#mlpconv block3</span>
@@ -12251,7 +12242,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[13]:</div>
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">nin_cnn_model</span> <span class="o">=</span> <span class="n">nin_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">)</span>
@@ -12276,7 +12267,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 <div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">compile_and_train</span><span class="p">(</span><span class="n">nin_cnn_model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">_</span> <span class="o">=</span> <span class="n">compile_and_train</span><span class="p">(</span><span class="n">nin_cnn_model</span><span class="p">,</span> <span class="n">num_epochs</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 </pre></div>
 
 </div>
@@ -12295,7 +12286,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="prompt input_prompt">In&nbsp;[22]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">evaluate_error</span><span class="p">(</span><span class="n">nin_cnn_model</span><span class="p">)</span>
@@ -12311,7 +12302,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[24]:</div>
+<div class="prompt output_prompt">Out[22]:</div>
 
 
 
@@ -12338,7 +12329,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">conv_pool_cnn_model</span> <span class="o">=</span> <span class="n">conv_pool_cnn</span><span class="p">(</span><span class="n">model_input</span><span class="p">)</span>
@@ -12368,7 +12359,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="prompt input_prompt">In&nbsp;[17]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">ensemble</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">model_input</span><span class="p">):</span>
@@ -12388,7 +12379,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="prompt input_prompt">In&nbsp;[18]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">ensemble_model</span> <span class="o">=</span> <span class="n">ensemble</span><span class="p">(</span><span class="n">models</span><span class="p">,</span> <span class="n">model_input</span><span class="p">)</span>
@@ -12410,68 +12401,10 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[17]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">evaluate_error</span><span class="p">(</span><span class="n">ensemble_model</span><span class="p">)</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-<div class="prompt output_prompt">Out[17]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>0.2049</pre>
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
-</div>
-<div class="inner_cell">
-<div class="text_cell_render border-box-sizing rendered_html">
-<h2 id="Other-Possible-Ensembles">Other Possible Ensembles<a class="anchor-link" href="#Other-Possible-Ensembles">&#182;</a></h2><p>Just for completeness, we can check performance of ensembles that consist of 2 model combinations.</p>
-
-</div>
-</div>
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[18]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_A</span> <span class="o">=</span> <span class="p">[</span><span class="n">conv_pool_cnn_model</span><span class="p">,</span> <span class="n">all_cnn_model</span><span class="p">]</span>
-<span class="n">pair_B</span> <span class="o">=</span> <span class="p">[</span><span class="n">conv_pool_cnn_model</span><span class="p">,</span> <span class="n">nin_cnn_model</span><span class="p">]</span>
-<span class="n">pair_C</span> <span class="o">=</span> <span class="p">[</span><span class="n">all_cnn_model</span><span class="p">,</span> <span class="n">nin_cnn_model</span><span class="p">]</span>
-</pre></div>
-
-</div>
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
 <div class="prompt input_prompt">In&nbsp;[19]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_A_ensemble_model</span> <span class="o">=</span> <span class="n">ensemble</span><span class="p">(</span><span class="n">pair_A</span><span class="p">,</span> <span class="n">model_input</span><span class="p">)</span>
-<span class="n">evaluate_error</span><span class="p">(</span><span class="n">pair_A_ensemble_model</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">evaluate_error</span><span class="p">(</span><span class="n">ensemble_model</span><span class="p">)</span>
 </pre></div>
 
 </div>
@@ -12490,6 +12423,64 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 
 <div class="output_text output_subarea output_execute_result">
+<pre>0.2049</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="Other-Possible-Ensembles">Other Possible Ensembles<a class="anchor-link" href="#Other-Possible-Ensembles">&#182;</a></h2><p>Just for completeness, we can check performance of ensembles that consist of 2 model combinations. Two of them have lower error rate than single models.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_A</span> <span class="o">=</span> <span class="p">[</span><span class="n">conv_pool_cnn_model</span><span class="p">,</span> <span class="n">all_cnn_model</span><span class="p">]</span>
+<span class="n">pair_B</span> <span class="o">=</span> <span class="p">[</span><span class="n">conv_pool_cnn_model</span><span class="p">,</span> <span class="n">nin_cnn_model</span><span class="p">]</span>
+<span class="n">pair_C</span> <span class="o">=</span> <span class="p">[</span><span class="n">all_cnn_model</span><span class="p">,</span> <span class="n">nin_cnn_model</span><span class="p">]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[24]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_A_ensemble_model</span> <span class="o">=</span> <span class="n">ensemble</span><span class="p">(</span><span class="n">pair_A</span><span class="p">,</span> <span class="n">model_input</span><span class="p">)</span>
+<span class="n">evaluate_error</span><span class="p">(</span><span class="n">pair_A_ensemble_model</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt output_prompt">Out[24]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
 <pre>0.21199999999999999</pre>
 </div>
 
@@ -12501,7 +12492,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[20]:</div>
+<div class="prompt input_prompt">In&nbsp;[25]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_B_ensemble_model</span> <span class="o">=</span> <span class="n">ensemble</span><span class="p">(</span><span class="n">pair_B</span><span class="p">,</span> <span class="n">model_input</span><span class="p">)</span>
@@ -12518,7 +12509,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[20]:</div>
+<div class="prompt output_prompt">Out[25]:</div>
 
 
 
@@ -12535,7 +12526,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[21]:</div>
+<div class="prompt input_prompt">In&nbsp;[26]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="n">pair_C_ensemble_model</span> <span class="o">=</span> <span class="n">ensemble</span><span class="p">(</span><span class="n">pair_C</span><span class="p">,</span> <span class="n">model_input</span><span class="p">)</span>
@@ -12552,7 +12543,7 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 
 <div class="output_area">
 
-<div class="prompt output_prompt">Out[21]:</div>
+<div class="prompt output_prompt">Out[26]:</div>
 
 
 
@@ -12572,8 +12563,33 @@ x_test shape : (10000, 32, 32, 3) | y_test shape : (10000, 1)
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h2 id="Conclusion">Conclusion<a class="anchor-link" href="#Conclusion">&#182;</a></h2><p>To reiterate what was said in the introduction: every model has its own weaknesses. The reasoning behind using an ensemble is that by stacking different models representing different hypotheses about the data, we can find a better hypothesis that is not in the hypothesis space of the models from which the ensemble is built.</p>
-<p>By using a very basic ensemble, a much lower error rate was achieved than when a single model was used. This proves effectiveness of ensembling.</p>
+<p>By using a very basic ensemble, a lower error rate was achieved than when a single model was used in most cases. This proves effectiveness of ensembling.</p>
 <p>Of course, there are some practical considerations to keep in mind when using an ensemble for your machine learning task. Since ensembling means stacking multiple models together, it also means that the input data needs to be forward-propagated for each model. This increases the amount of compute that needs to be performed and, consequently, evaluation (predicition) time. Increased evaluation time is not critical if you use an ensemble in research or in a Kaggle competition. However, it is a very critical factor when designing a commercial product. Another consideration is increased size of the final model which, again, might be a limiting factor for ensemble use in a commercial product.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<p>You can view this post as HTML version of a Jupyter notebook <a href="https://lawnboymax.github.io/portfolio/keras_ensemble/cnn_ensembling.html">here</a>.</p>
+<p>You can get the Jupyter notebook source code from my <a href="https://github.com/LawnboyMax">GitHub</a>.</p>
+
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
+<h2 id="References">References<a class="anchor-link" href="#References">&#182;</a></h2><ol>
+<li><strong>Ensemble Learning</strong>. (n.d.). In Wikipedia. Retrieved December 12, 2017, from <a href="https://en.wikipedia.org/wiki/Ensemble_learning">https://en.wikipedia.org/wiki/Ensemble_learning</a></li>
+<li>D. Opitz and R. Maclin (1999) “<strong>Popular Ensemble Methods: An Empirical Study</strong>”, Volume 11, pages 169–198 (available at <a href="http://jair.org/papers/paper614.html">http://jair.org/papers/paper614.html</a>)</li>
+<li><a href="https://www.cs.toronto.edu/~kriz/learning-features-2009-TR.pdf"><strong>Learning Multiple Layers of Features from Tiny Images</strong></a>, Alex Krizhevsky, 2009.</li>
+<li><a href="https://arxiv.org/abs/1412.6806v3">arXiv:1412.6806v3</a> [cs.LG]</li>
+<li><a href="https://arxiv.org/abs/1312.4400v3">arXiv:1312.4400v3</a> [cs.NE]</li>
+</ol>
 
 </div>
 </div>
